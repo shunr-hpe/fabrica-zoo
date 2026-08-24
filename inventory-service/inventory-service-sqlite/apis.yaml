@@ -1,0 +1,13 @@
+groups:
+    - name: inventory-service.openchami.org
+      storageVersion: v1
+      versions:
+        - v1
+      resources:
+        - ComponentEndpoint
+        - Component
+        - EthernetInterface
+        - Group
+        - Hardware
+        - RedfishEndpoint
+        - ServiceEndpoint
