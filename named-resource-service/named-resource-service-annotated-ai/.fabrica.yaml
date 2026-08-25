@@ -1,0 +1,41 @@
+project:
+    name: named-resource-service
+    module: github.com/openchami/named-resource-service
+    created: 2026-08-24T23:07:07.7260251-06:00
+features:
+    validation:
+        enabled: true
+        mode: strict
+    events:
+        enabled: false
+        bus_type: memory
+    conditional:
+        enabled: true
+        etag_algorithm: sha256
+    auth:
+        enabled: false
+    storage:
+        enabled: true
+        type: ent
+        db_driver: sqlite3
+    metrics:
+        enabled: false
+        provider: prometheus
+    reconciliation:
+        enabled: false
+        worker_count: 5
+        requeue_delay: 5
+    security:
+        authn:
+            enabled: false
+        authz:
+            enabled: false
+            mode: enforce
+generation:
+    handlers: true
+    storage: true
+    client: true
+    openapi: true
+    events: false
+    middleware: true
+    reconciliation: false
