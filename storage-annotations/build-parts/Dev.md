@@ -349,6 +349,43 @@ sqlite3 data/user.db \
 Note: in bash the `$` inside a JSON path (`$.username`) is escaped as
 `\$.username` when the SQL is wrapped in double quotes.
 
+#### Writing values back
+
+The User spec has `username`, `email`, `password`, `fullName`, `role`, `active`.
+On the promote-annotated variant the `spec_*` fields are real columns, so update
+them directly; the non-promoted `fullName` lives in the `spec_data` JSON:
+
+```bash
+# Promoted columns are ordinary columns
+sqlite3 data/user.db \
+  "UPDATE users SET spec_role = 'admin', spec_active = 1 WHERE spec_username = 'alice';"
+
+# fullName is not promoted — write it into spec_data with json_set
+sqlite3 data/user.db \
+  "UPDATE users SET spec_data = json_set(spec_data, '\$.fullName', 'Alice Liddell') WHERE spec_username = 'alice';"
+```
+
+On the base variant everything is in the generic `resources.spec` JSON column:
+
+```bash
+# Update a text field
+sqlite3 data/user.db \
+  "UPDATE resources SET spec = json_set(spec, '\$.role', 'admin') WHERE json_extract(spec, '\$.username') = 'alice';"
+
+# Set a boolean (json('true') keeps the JSON type instead of quoting it)
+sqlite3 data/user.db \
+  "UPDATE resources SET spec = json_set(spec, '\$.active', json('true')) WHERE json_extract(spec, '\$.username') = 'alice';"
+
+# Merge several fields at once
+sqlite3 data/user.db \
+  "UPDATE resources SET spec = json_patch(spec, json('{\"role\":\"admin\",\"fullName\":\"Alice Liddell\"}')) WHERE json_extract(spec, '\$.username') = 'alice';"
+```
+
+Caveats: direct writes bypass the API's validation and `resourceVersion` bumps.
+On the dedicated table, writing a promoted column and its `spec_data` copy
+separately can make them drift (the API keeps them in sync), and `password` is
+stored bcrypt-hashed — never write `spec_password` as plaintext.
+
 ### Inspecting a Postgres database (psql)
 
 For the Postgres variants (`user-service-postgres`, `user-service-pr-postgres`)
@@ -417,6 +454,32 @@ psql "$PG" -c "SELECT uid, spec->>'username' AS username, spec->>'email' AS emai
 psql "$PG" -c "SELECT spec->>'username' AS username, COUNT(*) AS n
                FROM resources GROUP BY 1 HAVING COUNT(*) > 1;"
 ```
+
+Writing values back — promote-annotated `users` (real columns + `spec_data`):
+
+```bash
+# Promoted columns are ordinary columns
+psql "$PG" -c "UPDATE users SET spec_role = 'admin', spec_active = true WHERE spec_username = 'alice';"
+
+# fullName is not promoted — write it into the spec_data jsonb column
+psql "$PG" -c "UPDATE users SET spec_data = jsonb_set(spec_data, '{fullName}', '\"Alice Liddell\"') WHERE spec_username = 'alice';"
+```
+
+Base variant `user-service-pr-postgres` (generic `resources.spec` jsonb):
+
+```bash
+# Update a text field (a JSON string keeps its quotes)
+psql "$PG" -c "UPDATE resources SET spec = jsonb_set(spec, '{role}', '\"admin\"') WHERE spec->>'username' = 'alice';"
+
+# Set a boolean (JSON true, not the text 'true')
+psql "$PG" -c "UPDATE resources SET spec = jsonb_set(spec, '{active}', 'true') WHERE spec->>'username' = 'alice';"
+
+# Merge several fields with ||
+psql "$PG" -c "UPDATE resources SET spec = spec || '{\"role\":\"admin\",\"fullName\":\"Alice Liddell\"}'::jsonb WHERE spec->>'username' = 'alice';"
+```
+
+Same caveats as SQLite: direct writes skip API validation/`resourceVersion`,
+promoted columns and `spec_data` can drift, and `spec_password` is bcrypt-hashed.
 
 Operator cheat sheet (SQLite → Postgres):
 

@@ -263,6 +263,31 @@ Note: in bash the `$` inside a JSON path (`$.name`) is escaped as `\$.name`
 when the SQL is wrapped in double quotes, so the shell does not try to expand
 it.
 
+Write spec fields back with SQLite's JSON functions (they keep the `spec`
+column valid JSON). The Named spec has `name`, `altName`, `number` and the
+optional `somethingOrNothing`:
+
+```bash
+# Update a text field (match the row by another spec field)
+sqlite3 data/named-resource.db \
+  "UPDATE resources SET spec = json_set(spec, '\$.altName', 'widget-a-alt') WHERE json_extract(spec, '\$.name') = 'widget-a';"
+
+# Update the numeric field (json('42') stays a number, not a quoted string)
+sqlite3 data/named-resource.db \
+  "UPDATE resources SET spec = json_set(spec, '\$.number', json('42')) WHERE json_extract(spec, '\$.name') = 'widget-a';"
+
+# Add the optional field only if it is absent
+sqlite3 data/named-resource.db \
+  "UPDATE resources SET spec = json_insert(spec, '\$.somethingOrNothing', 'maybe') WHERE json_extract(spec, '\$.name') = 'widget-a';"
+
+# Merge several fields at once (RFC 7396 patch)
+sqlite3 data/named-resource.db \
+  "UPDATE resources SET spec = json_patch(spec, json('{\"altName\":\"w-a\",\"number\":7}')) WHERE json_extract(spec, '\$.name') = 'widget-a';"
+```
+
+Direct writes bypass the API's validation and `resourceVersion` bumps — use
+them for inspection/repair, not normal changes.
+
 ---
 
 ## Inspecting a Postgres database (psql)
@@ -340,6 +365,23 @@ psql "$PG" -c 'SELECT COUNT(*) FROM resources;'
 
 # Dump only the schema (like sqlite .schema) — uses pg_dump
 pg_dump --schema-only --table=resources "$PG"
+```
+
+Write spec fields back with `jsonb_set` / the `||` merge operator (the value
+must be valid JSON):
+
+```bash
+# Update a text field (a JSON string keeps its quotes: '\"...\"')
+psql "$PG" -c "UPDATE resources SET spec = jsonb_set(spec, '{altName}', '\"widget-a-alt\"') WHERE spec->>'name' = 'widget-a';"
+
+# Update the numeric field (written as JSON, not quoted text)
+psql "$PG" -c "UPDATE resources SET spec = jsonb_set(spec, '{number}', '42') WHERE spec->>'name' = 'widget-a';"
+
+# Merge several fields at once with ||
+psql "$PG" -c "UPDATE resources SET spec = spec || '{\"altName\":\"w-a\",\"number\":7}'::jsonb WHERE spec->>'name' = 'widget-a';"
+
+# Remove the optional field with the - operator
+psql "$PG" -c "UPDATE resources SET spec = spec - 'somethingOrNothing' WHERE spec->>'name' = 'widget-a';"
 ```
 
 Operator cheat sheet (SQLite → Postgres):
