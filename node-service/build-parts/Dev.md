@@ -244,6 +244,24 @@ spec as `jsonb`, so JSON access uses the `->` / `->>` operators instead of
 PG="postgres://postgres:postgres@localhost:5432/named-resource?sslmode=disable"
 ```
 
+No local `psql` install? Use the one bundled in the `postgres:16` image. If you
+started Postgres as a named container (e.g. `docker run --name named-pg ...`),
+exec into it:
+
+```bash
+docker exec -it named-pg psql -U postgres -d named-resource        # interactive
+docker exec -i  named-pg psql -U postgres -d named-resource -c '\dt'  # one-off
+```
+
+Or run a throwaway client from the image (Docker Desktop resolves the host as
+`host.docker.internal`; on Linux add `--add-host=host.docker.internal:host-gateway`
+or use `--network host` with `localhost`):
+
+```bash
+docker run --rm -it postgres:16 \
+  psql "postgres://postgres:postgres@host.docker.internal:5432/named-resource?sslmode=disable"
+```
+
 Interactive shell and meta-commands (the psql equivalents of sqlite's
 dot-commands):
 

@@ -327,6 +327,23 @@ operators instead of `json_extract`.
 PG="postgres://postgres:postgres@localhost:5432/user_service?sslmode=disable"
 ```
 
+No local `psql` install? Use the one bundled in the `postgres:16` container.
+Exec into the running `user-pg` container started above:
+
+```bash
+docker exec -it user-pg psql -U postgres -d user_service        # interactive
+docker exec -i  user-pg psql -U postgres -d user_service -c '\dt'  # one-off
+```
+
+Or run a throwaway client from the image (Docker Desktop resolves the host as
+`host.docker.internal`; on Linux add `--add-host=host.docker.internal:host-gateway`
+or use `--network host` with `localhost`):
+
+```bash
+docker run --rm -it postgres:16 \
+  psql "postgres://postgres:postgres@host.docker.internal:5432/user_service?sslmode=disable"
+```
+
 Meta-commands (psql equivalents of the sqlite dot-commands):
 
 ```
