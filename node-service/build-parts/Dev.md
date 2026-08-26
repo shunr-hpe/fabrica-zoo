@@ -47,7 +47,7 @@ The response includes the generated `metadata.uid`. Capture it for the
 follow-up requests:
 
 ```bash
-UID=$(curl -s -X POST "$BASE/nameds" \
+RESOURCE_UID=$(curl -s -X POST "$BASE/nameds" \
   -H "Content-Type: application/json" \
   -d '{
     "metadata": { "name": "widget-b" },
@@ -58,7 +58,7 @@ UID=$(curl -s -X POST "$BASE/nameds" \
     }
   }' | jq -r '.metadata.uid')
 
-echo "Created UID: $UID"
+echo "Created RESOURCE_UID: $RESOURCE_UID"
 ```
 
 ---
@@ -72,17 +72,17 @@ curl -s "$BASE/nameds" | jq
 ## GET — fetch a single resource by UID
 
 ```bash
-curl -s "$BASE/nameds/$UID" | jq
+curl -s "$BASE/nameds/$RESOURCE_UID" | jq
 ```
 
 ---
 
 ## PUT — update a resource
 
-Replace the resource identified by `$UID`. Include the full desired spec.
+Replace the resource identified by `$RESOURCE_UID`. Include the full desired spec.
 
 ```bash
-curl -s -X PUT "$BASE/nameds/$UID" \
+curl -s -X PUT "$BASE/nameds/$RESOURCE_UID" \
   -H "Content-Type: application/json" \
   -d '{
     "metadata": { "name": "widget-b" },
@@ -100,13 +100,13 @@ curl -s -X PUT "$BASE/nameds/$UID" \
 ## DELETE — remove a resource
 
 ```bash
-curl -s -X DELETE "$BASE/nameds/$UID" | jq
+curl -s -X DELETE "$BASE/nameds/$RESOURCE_UID" | jq
 ```
 
 If the response body is empty on delete, you can confirm removal with:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' "$BASE/nameds/$UID"
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/nameds/$RESOURCE_UID"
 ```
 
 ---

@@ -90,7 +90,7 @@ The response includes the generated `metadata.uid`. Capture it for the
 follow-up requests:
 
 ```bash
-UID=$(curl -s -X POST "$BASE/users" \
+RESOURCE_UID=$(curl -s -X POST "$BASE/users" \
   -H "Content-Type: application/json" \
   -d '{
     "metadata": { "name": "bob" },
@@ -103,7 +103,7 @@ UID=$(curl -s -X POST "$BASE/users" \
     }
   }' | jq -r '.metadata.uid')
 
-echo "Created UID: $UID"
+echo "Created RESOURCE_UID: $RESOURCE_UID"
 ```
 
 ---
@@ -117,7 +117,7 @@ curl -s "$BASE/users" | jq
 ## GET — fetch a single user by UID
 
 ```bash
-curl -s "$BASE/users/$UID" | jq
+curl -s "$BASE/users/$RESOURCE_UID" | jq
 ```
 
 Note: `password` is marked sensitive, so it is never returned in responses.
@@ -126,11 +126,11 @@ Note: `password` is marked sensitive, so it is never returned in responses.
 
 ## PUT — update a user
 
-Replace the user identified by `$UID`. Include the full desired spec.
+Replace the user identified by `$RESOURCE_UID`. Include the full desired spec.
 `username` and `password` are immutable, so keep `username` unchanged.
 
 ```bash
-curl -s -X PUT "$BASE/users/$UID" \
+curl -s -X PUT "$BASE/users/$RESOURCE_UID" \
   -H "Content-Type: application/json" \
   -d '{
     "metadata": { "name": "bob" },
@@ -150,13 +150,13 @@ curl -s -X PUT "$BASE/users/$UID" \
 ## DELETE — remove a user
 
 ```bash
-curl -s -X DELETE "$BASE/users/$UID" | jq
+curl -s -X DELETE "$BASE/users/$RESOURCE_UID" | jq
 ```
 
 Confirm removal:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' "$BASE/users/$UID"
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE/users/$RESOURCE_UID"
 ```
 
 ---
