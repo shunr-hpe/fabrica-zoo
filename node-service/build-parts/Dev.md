@@ -174,6 +174,39 @@ because the unique constraint on `spec.name` rejects the duplicate.
 The SQLite backend writes to the file named in `--database-url`
 (`data/named-resource.db` above). Inspect it with the `sqlite3` CLI.
 
+No local `sqlite3` install? Run it from a container, mounting the project dir
+so the `.db` file is visible. `alpine` is available everywhere (install sqlite
+on the fly); `keinos/sqlite3` is a dedicated image with `sqlite3` as its
+entrypoint:
+
+```bash
+# alpine (ubiquitous): install sqlite, then run
+docker run --rm -it -v "$PWD:/work" -w /work alpine \
+  sh -c 'apk add --no-cache sqlite >/dev/null && sqlite3 data/named-resource.db'
+
+# one-off query with alpine
+docker run --rm -v "$PWD:/work" -w /work alpine \
+  sh -c 'apk add --no-cache sqlite >/dev/null && sqlite3 data/named-resource.db ".tables"'
+
+# dedicated image (sqlite3 is the entrypoint — pass args directly)
+docker run --rm -it -v "$PWD:/work" -w /work keinos/sqlite3 data/named-resource.db
+docker run --rm    -v "$PWD:/work" -w /work keinos/sqlite3 data/named-resource.db '.tables'
+```
+
+To avoid reinstalling sqlite on every `alpine` run, build a reusable image once
+(one-liner, Dockerfile piped over stdin) and reference it afterwards:
+
+```bash
+printf 'FROM alpine\nRUN apk add --no-cache sqlite\n' | docker build -t alpine-sqlite -
+
+# then use it directly — no apk step needed
+docker run --rm -it -v "$PWD:/work" -w /work alpine-sqlite sqlite3 data/named-resource.db
+docker run --rm    -v "$PWD:/work" -w /work alpine-sqlite sqlite3 data/named-resource.db '.tables'
+```
+
+The examples below use a local `sqlite3`; prefix any of them with one of the
+`docker run ...` wrappers above to run them from a container instead.
+
 Open an interactive shell:
 
 ```bash
