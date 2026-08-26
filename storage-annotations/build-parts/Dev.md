@@ -316,13 +316,67 @@ sqlite3 data/user.db \
 Note: in bash the `$` inside a JSON path (`$.username`) is escaped as
 `\$.username` when the SQL is wrapped in double quotes.
 
-### Postgres variants
+### Inspecting a Postgres database (psql)
 
-Use `psql` against the same database URL:
+For the Postgres variants (`user-service-postgres`, `user-service-pr-postgres`)
+use `psql` against the same `--database-url`. Promoted `spec_*` fields are real
+columns; JSON fields live in a `jsonb` column and use the `->` / `->>`
+operators instead of `json_extract`.
 
 ```bash
-psql "postgres://postgres:postgres@localhost:5432/user_service?sslmode=disable" \
-  -c '\d users' \
-  -c 'SELECT uid, spec_username, spec_email, spec_role FROM users;'
+PG="postgres://postgres:postgres@localhost:5432/user_service?sslmode=disable"
 ```
+
+Meta-commands (psql equivalents of the sqlite dot-commands):
+
+```
+\dt        -- list tables                         (sqlite: .tables)
+\d users   -- describe table + indexes/constraints (sqlite: .schema / .indexes)
+\di        -- list indexes
+\x         -- expanded row output
+\q         -- quit                                 (sqlite: .quit)
+```
+
+Promote-annotated variant (`user-service-postgres`) — dedicated `users` table:
+
+```bash
+# Columns, constraints and indexes: shows the UNIQUE on spec_username and the
+# idx_user_login composite unique index
+psql "$PG" -c '\d users'
+
+# Just the indexes/constraints
+psql "$PG" -c "SELECT indexname, indexdef FROM pg_indexes WHERE tablename='users';"
+
+# Query promoted columns directly (no JSON needed)
+psql "$PG" -c 'SELECT uid, spec_username, spec_email, spec_role, spec_active FROM users;'
+
+# Non-promoted fields (e.g. fullName) live in the spec_data jsonb column
+psql "$PG" -c "SELECT spec_username, spec_data->>'fullName' AS full_name FROM users;"
+```
+
+Base variant (`user-service-pr-postgres`) — generic `resources` table:
+
+```bash
+psql "$PG" -c '\d resources'
+
+# Everything is in the spec jsonb column; username is NOT a unique column here
+psql "$PG" -c "SELECT uid, spec->>'username' AS username, spec->>'email' AS email FROM resources;"
+
+# Duplicate usernames are allowed (no constraint) — returns rows here, but
+# nothing on the promote-annotated variant
+psql "$PG" -c "SELECT spec->>'username' AS username, COUNT(*) AS n
+               FROM resources GROUP BY 1 HAVING COUNT(*) > 1;"
+```
+
+Operator cheat sheet (SQLite → Postgres):
+
+| Task              | SQLite                                    | Postgres                     |
+| ----------------- | ----------------------------------------- | ---------------------------- |
+| List tables       | `.tables`                                 | `\dt`                        |
+| Table schema      | `.schema users`                           | `\d users`                   |
+| List indexes      | `.indexes users`                          | `\d users` or `\di`          |
+| JSON field (text) | `json_extract(spec_data,'$.fullName')`    | `spec_data->>'fullName'`     |
+| Nested JSON       | `json_extract(col,'$.a.b')`               | `col->'a'->>'b'`             |
+| Headers/columns   | `-header -column`                         | on by default; `\x` expanded |
+
 

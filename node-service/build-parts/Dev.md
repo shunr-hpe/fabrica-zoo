@@ -229,3 +229,78 @@ sqlite3 data/named-resource.db 'SELECT COUNT(*) FROM resources;'
 Note: in bash the `$` inside a JSON path (`$.name`) is escaped as `\$.name`
 when the SQL is wrapped in double quotes, so the shell does not try to expand
 it.
+
+---
+
+## Inspecting a Postgres database (psql)
+
+If you run a Postgres-backed build instead (start it with, e.g.,
+`--database-url "postgres://localhost/named-resource?sslmode=disable"`), the
+same inspection is done with `psql`. The generic `resources` table stores the
+spec as `jsonb`, so JSON access uses the `->` / `->>` operators instead of
+`json_extract`.
+
+```bash
+PG="postgres://postgres:postgres@localhost:5432/named-resource?sslmode=disable"
+```
+
+Interactive shell and meta-commands (the psql equivalents of sqlite's
+dot-commands):
+
+```bash
+psql "$PG"
+```
+
+```
+\dt            -- list tables            (sqlite: .tables)
+\d resources  -- describe table+indexes  (sqlite: .schema / .indexes)
+\di           -- list indexes
+\x            -- toggle expanded output
+\q            -- quit                    (sqlite: .quit)
+```
+
+One-off queries with `-c` (psql prints headers and aligns by default):
+
+```bash
+# List tables
+psql "$PG" -c '\dt'
+
+# Describe the resources table (columns, indexes, constraints)
+psql "$PG" -c '\d resources'
+
+# All rows
+psql "$PG" -c 'SELECT uid, name, resource_type, resource_version FROM resources;'
+```
+
+Read individual spec fields from the `jsonb` column with `->` / `->>`:
+
+```bash
+# ->> returns text; cast when you need a number
+psql "$PG" -c "SELECT uid,
+                      spec->>'name'          AS name,
+                      (spec->>'number')::int AS number
+               FROM resources;"
+
+# Find a row by a spec field
+psql "$PG" -c "SELECT uid FROM resources WHERE spec->>'name' = 'widget-a';"
+
+# Count rows
+psql "$PG" -c 'SELECT COUNT(*) FROM resources;'
+
+# Dump only the schema (like sqlite .schema) — uses pg_dump
+pg_dump --schema-only --table=resources "$PG"
+```
+
+Operator cheat sheet (SQLite → Postgres):
+
+| Task              | SQLite                          | Postgres                     |
+| ----------------- | ------------------------------- | ---------------------------- |
+| List tables       | `.tables`                       | `\dt`                        |
+| Table schema      | `.schema resources`             | `\d resources`               |
+| List indexes      | `.indexes resources`            | `\d resources` or `\di`      |
+| JSON field (text) | `json_extract(spec,'$.name')`   | `spec->>'name'`              |
+| Nested JSON       | `json_extract(spec,'$.a.b')`    | `spec->'a'->>'b'`            |
+| Headers/columns   | `-header -column`               | on by default; `\x` expanded |
+
+Unlike SQLite (where `$` in a JSON path must be escaped), the Postgres `->>`
+operator uses plain single-quoted keys, so no shell escaping is needed.
