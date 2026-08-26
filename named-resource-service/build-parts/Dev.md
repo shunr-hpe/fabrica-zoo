@@ -166,3 +166,66 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/nameds" \
 
 The first POST returns a `2xx` status; the second returns an error status
 because the unique constraint on `spec.name` rejects the duplicate.
+
+---
+
+## Inspecting the SQLite database
+
+The SQLite backend writes to the file named in `--database-url`
+(`data/named-resource.db` above). Inspect it with the `sqlite3` CLI.
+
+Open an interactive shell:
+
+```bash
+sqlite3 data/named-resource.db
+```
+
+Useful dot-commands inside the shell:
+
+```
+.tables            -- list tables (resources, labels, annotations)
+.schema            -- full schema for every table
+.schema resources  -- schema for one table
+.indexes resources -- indexes on a table
+.headers on        -- show column names in query output
+.mode column       -- align output into columns
+.quit              -- exit
+```
+
+Run one-off queries without entering the shell by passing the SQL (or a
+dot-command) as an argument:
+
+```bash
+# List tables
+sqlite3 data/named-resource.db '.tables'
+
+# Dump the resources table schema
+sqlite3 data/named-resource.db '.schema resources'
+
+# All rows, readable
+sqlite3 -header -column data/named-resource.db \
+  'SELECT uid, name, resource_type, resource_version FROM resources;'
+```
+
+The full resource spec is stored as JSON in the `spec` column. Use SQLite's
+JSON functions to read individual fields:
+
+```bash
+# Extract spec fields from the JSON column
+sqlite3 -header -column data/named-resource.db \
+  "SELECT uid,
+          json_extract(spec, '\$.name')   AS name,
+          json_extract(spec, '\$.number') AS number
+   FROM resources;"
+
+# Find a row by a spec field
+sqlite3 data/named-resource.db \
+  "SELECT uid FROM resources WHERE json_extract(spec, '\$.name') = 'widget-a';"
+
+# Count rows
+sqlite3 data/named-resource.db 'SELECT COUNT(*) FROM resources;'
+```
+
+Note: in bash the `$` inside a JSON path (`$.name`) is escaped as `\$.name`
+when the SQL is wrapped in double quotes, so the shell does not try to expand
+it.

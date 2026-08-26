@@ -242,9 +242,87 @@ Expected results:
   usernames are stored in the generic JSON `spec` column with no constraint.
 
 You can prove the difference on a promote-annotated variant by inspecting the
-database directly, e.g. for SQLite:
+database directly. See the next section.
+
+---
+
+## Inspecting the SQLite database
+
+Applies to the SQLite variants (`user-service`, `user-service-pr-sqlite`),
+which write to `data/user.db`. (Postgres variants use `psql` — see the end of
+this section.)
+
+Open an interactive shell and orient yourself:
 
 ```bash
+sqlite3 data/user.db
+```
+
+```
+.tables       -- list tables
+.schema       -- full schema for every table
+.headers on   -- show column names
+.mode column  -- align output
+.quit         -- exit
+```
+
+On `user-service` (promote-annotated) there is a dedicated `users` table with
+real columns; on `user-service-pr-sqlite` the data lives only in the generic
+`resources` table.
+
+### Promote-annotated variant — dedicated `users` table
+
+```bash
+# Schema shows the promoted spec_* columns and their constraints
+sqlite3 data/user.db '.schema users'
+
+# The unique constraint on spec_username
 sqlite3 data/user.db '.schema users' | grep -i spec_username
 # -> spec_username text UNIQUE ...
+
+# List the indexes on the table (includes idx_user_login composite unique)
+sqlite3 data/user.db '.indexes users'
+sqlite3 -header -column data/user.db \
+  "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='users';"
+
+# Query promoted columns directly (no JSON needed)
+sqlite3 -header -column data/user.db \
+  'SELECT uid, spec_username, spec_email, spec_role, spec_active FROM users;'
+
+# Non-promoted fields (e.g. fullName) stay in the spec_data JSON blob
+sqlite3 -header -column data/user.db \
+  "SELECT spec_username, json_extract(spec_data, '\$.fullName') AS full_name FROM users;"
 ```
+
+### Base variant (`user-service-pr-sqlite`) — generic `resources` table
+
+```bash
+sqlite3 data/user.db '.schema resources'
+
+# Everything is in the spec JSON column; username is NOT a unique column here
+sqlite3 -header -column data/user.db \
+  "SELECT uid,
+          json_extract(spec, '\$.username') AS username,
+          json_extract(spec, '\$.email')    AS email
+   FROM resources;"
+
+# Duplicate usernames are allowed (no constraint) — this returns rows here,
+# but nothing on the promote-annotated variant
+sqlite3 data/user.db \
+  "SELECT json_extract(spec, '\$.username') AS username, COUNT(*) AS n
+   FROM resources GROUP BY username HAVING n > 1;"
+```
+
+Note: in bash the `$` inside a JSON path (`$.username`) is escaped as
+`\$.username` when the SQL is wrapped in double quotes.
+
+### Postgres variants
+
+Use `psql` against the same database URL:
+
+```bash
+psql "postgres://postgres:postgres@localhost:5432/user_service?sslmode=disable" \
+  -c '\d users' \
+  -c 'SELECT uid, spec_username, spec_email, spec_role FROM users;'
+```
+
