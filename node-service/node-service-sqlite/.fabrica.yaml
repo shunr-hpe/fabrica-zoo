@@ -1,7 +1,7 @@
 project:
     name: node-service-sqlite
     module: github.com/openchami/node-service-sqlite
-    created: 2026-08-25T14:27:32.3424893-06:00
+    created: 2026-08-27T16:27:47.2508267-06:00
 features:
     validation:
         enabled: true
@@ -13,7 +13,7 @@ features:
         enabled: true
         etag_algorithm: sha256
     auth:
-        enabled: false
+        enabled: true
     storage:
         enabled: true
         type: ent
@@ -27,7 +27,7 @@ features:
         requeue_delay: 5
     security:
         authn:
-            enabled: false
+            enabled: true
         authz:
             enabled: false
             mode: enforce

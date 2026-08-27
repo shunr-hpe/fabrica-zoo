@@ -21,6 +21,7 @@
 //   --output, -o   Output format: table, json, yaml (env: NODE_SERVICE_POSTGRES_OUTPUT)
 //   --version, -v  API version to request: v1, v2beta1, etc. (env: NODE_SERVICE_POSTGRES_VERSION)
 //   --token        JWT bearer token (env: NODE_SERVICE_POSTGRES_TOKEN)
+//   --show-token   Show the full bearer token in debug logs
 //   --config       Config file path (default: ~/.node_service_postgres-cli.yaml)
 //
 // Configuration sources (in order of precedence):
@@ -86,6 +87,7 @@ var (
 	output      string
 	apiVersion  string
 	bearerToken string
+	showToken   bool
 	logLevel    client.LogLevel
 )
 
@@ -112,6 +114,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&output, "output", "o", "table", "output format: table, json, yaml")
 	rootCmd.PersistentFlags().StringVarP(&apiVersion, "version", "v", "", "API version to request (e.g., v1, v2beta1)")
 	rootCmd.PersistentFlags().StringVar(&bearerToken, "token", "", "JWT bearer token")
+	rootCmd.PersistentFlags().BoolVar(&showToken, "show-token", false, "show full bearer token in debug logs instead of a truncated value")
 	rootCmd.PersistentFlags().VarP(&logLevel, "log-level", "l", "set verbosity of logs (e.g., info, warning, debug)")
 
 	// Register shell completion functions
@@ -123,6 +126,7 @@ func init() {
 	viper.BindPFlag("output", rootCmd.PersistentFlags().Lookup("output"))
 	viper.BindPFlag("version", rootCmd.PersistentFlags().Lookup("version"))
 	viper.BindPFlag("token", rootCmd.PersistentFlags().Lookup("token"))
+	viper.BindPFlag("show-token", rootCmd.PersistentFlags().Lookup("show-token"))
 	viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
 
 	// Environment variable support
@@ -164,6 +168,7 @@ func getClient() (*client.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	c = c.WithShowToken(viper.GetBool("show-token"))
 
 	// Apply version if specified
 	version := viper.GetString("version")

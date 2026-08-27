@@ -4,7 +4,7 @@
 
 
 # Service binary name
-BINARY_NAME=named-resource-service
+BINARY_NAME=node-service
 GO=go
 GOFLAGS=-v
 
