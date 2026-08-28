@@ -1,0 +1,41 @@
+project:
+    name: user-service-pr-postgres
+    module: github.com/openchami/user-service-pr-postgres
+    created: 2026-08-28T12:19:01.3682861-06:00
+features:
+    validation:
+        enabled: true
+        mode: strict
+    events:
+        enabled: false
+        bus_type: memory
+    conditional:
+        enabled: true
+        etag_algorithm: sha256
+    auth:
+        enabled: true
+    storage:
+        enabled: true
+        type: ent
+        db_driver: postgres
+    metrics:
+        enabled: false
+        provider: prometheus
+    reconciliation:
+        enabled: false
+        worker_count: 5
+        requeue_delay: 5
+    security:
+        authn:
+            enabled: true
+        authz:
+            enabled: false
+            mode: enforce
+generation:
+    handlers: true
+    storage: true
+    client: true
+    openapi: true
+    events: false
+    middleware: true
+    reconciliation: false
