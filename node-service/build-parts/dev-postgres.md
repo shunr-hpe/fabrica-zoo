@@ -1,6 +1,6 @@
 # named-resource-service (Postgres) — dev notes
 
-Postgres-focused companion to [`Dev.md`](./Dev.md). These notes cover starting a
+Postgres-focused companion to [`dev.md`](./dev.md). These notes cover starting a
 Postgres instance and running a **Postgres-backed** build of the service end to
 end (start Postgres → run the service → CRUD → inspect with `psql`).
 

@@ -1,6 +1,6 @@
 # user-service (Postgres) — dev notes
 
-Postgres-focused companion to [`Dev.md`](./Dev.md). These notes cover starting a
+Postgres-focused companion to [`dev.md`](./dev.md). These notes cover starting a
 Postgres instance and running a **Postgres-backed** `user-service` build end to
 end. They target the two Postgres variants:
 
