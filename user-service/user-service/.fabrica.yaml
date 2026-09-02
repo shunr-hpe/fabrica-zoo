@@ -1,7 +1,7 @@
 project:
     name: user-service
     module: github.com/openchami/user-service
-    created: 2026-09-02T11:29:02.798645052-06:00
+    created: 2026-09-02T11:46:33.291035368-06:00
 features:
     validation:
         enabled: true
