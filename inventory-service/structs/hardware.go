@@ -7,6 +7,10 @@ import (
 
 // HardwareSpec defines the desired state of Hardware
 type HardwareSpec struct {
+	// ID is the hardware xname and serves as the resource identifier.
+	//
+	// +fabrica:field:index
+	// +fabrica:field:unique
 	ID      string `json:"ID" yaml:"ID"`
 	Type    string `json:"Type" yaml:"Type"`
 	Ordinal int    `json:"Ordinal" yaml:"Ordinal"`

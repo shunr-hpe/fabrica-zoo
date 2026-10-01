@@ -2,6 +2,11 @@ package smd_structs
 
 type EthernetInterfaceSpec struct {
 	// Description            string              `json:"Description" yaml:"Description"`
+
+	// ID is the ethernet interface identifier and serves as the resource identifier.
+	//
+	// +fabrica:field:index
+	// +fabrica:field:unique
 	ID          string      `json:"ID" yaml:"ID"`
 	MACAddr     string      `json:"MACAddress" yaml:"MACAddress"`
 	LastUpdate  string      `json:"LastUpdate" yaml:"LastUpdate"`

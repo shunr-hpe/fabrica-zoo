@@ -2,6 +2,11 @@ package smd_structs
 
 import "encoding/json"
 
+// ServiceEndpointSpec identifies a service endpoint. The resource identifier is
+// the composite of RedfishType and RfEndpointID, so index and uniqueness are
+// declared on that pair.
+//
+// +fabrica:index:fields=RedfishType,RfEndpointID:unique
 type ServiceEndpointSpec struct {
 	// Embedded struct
 	ServiceDescription

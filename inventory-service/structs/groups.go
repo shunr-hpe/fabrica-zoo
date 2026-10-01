@@ -2,6 +2,11 @@ package smd_structs
 
 type GroupSpec struct {
 	// Description    string   `json:"description" yaml:"description"`
+
+	// Label is the group label and serves as the resource identifier.
+	//
+	// +fabrica:field:index
+	// +fabrica:field:unique
 	Label          string   `json:"label" yaml:"label"`
 	ExclusiveGroup string   `json:"exclusiveGroup,omitempty" yaml:"exclusiveGroup,omitempty"`
 	Tags           []string `json:"tags,omitempty" yaml:"tags,omitempty"`

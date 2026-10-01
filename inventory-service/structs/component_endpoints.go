@@ -3,6 +3,10 @@ package smd_structs
 import "encoding/json"
 
 type ComponentEndpointSpec struct {
+	// ID is the component xname and serves as the resource identifier.
+	//
+	// +fabrica:field:index
+	// +fabrica:field:unique
 	ID   string `json:"ID" yaml:"ID"`
 	Type string `json:"Type" yaml:"Type"`
 
