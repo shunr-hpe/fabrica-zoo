@@ -13,6 +13,8 @@ go build -o bin/inventory-service ./cmd/server
 rm -rf data; mkdir -p data
 ./bin/inventory-service serve --port 8080 \
   --database-url "file:./data/inventory.db?_fk=1" --auth-enabled=false
+./bin/inventory-service serve --port 8080 \
+  --database-url "file:./data/inventory.db?_fk=1"
 ```
 
 Or just use the Makefile target, which builds and runs with the same flags:
