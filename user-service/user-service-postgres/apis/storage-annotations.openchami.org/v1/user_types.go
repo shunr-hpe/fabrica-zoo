@@ -11,6 +11,9 @@ import (
 )
 
 // User represents a user resource
+//
+// +fabrica:resource
+// +fabrica:storage=dedicated
 type User struct {
 	APIVersion string           `json:"apiVersion" yaml:"apiVersion"`
 	Kind       string           `json:"kind" yaml:"kind"`

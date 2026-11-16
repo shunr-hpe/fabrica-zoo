@@ -38,7 +38,7 @@ package client
 import (
 	"github.com/openchami/fabrica/pkg/fabrica"
 
-	"github.com/openchami/user-service-pr-postgres/apis/storage-annotations.openchami.org/v1"
+	"github.com/openchami/user-service-postgres/apis/storage-annotations.openchami.org/v1"
 )
 
 // CreateUserRequest represents a request to create a User (Advanced API)

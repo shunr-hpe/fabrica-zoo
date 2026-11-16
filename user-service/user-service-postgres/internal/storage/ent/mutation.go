@@ -12,10 +12,10 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/annotation"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/label"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/predicate"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/resource"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/annotation"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/label"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/predicate"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/resource"
 )
 
 const (

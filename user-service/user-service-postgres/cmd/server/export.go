@@ -8,10 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/openchami/user-service-postgres/internal/storage"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-
-	"github.com/openchami/user-service-pr-postgres/internal/storage"
 )
 
 func newExportCommand() *cobra.Command {
@@ -35,10 +34,10 @@ This is useful for:
 
 Examples:
   # Export all resources to YAML
-  user_service_pr_postgres export --format yaml --output ./backup
+  user_service_postgres export --format yaml --output ./backup
 
   # Export specific resource types
-  user_service_pr_postgres export --kinds User --output ./user-backup
+  user_service_postgres export --kinds User --output ./user-backup
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runExport(cmd.Context(), format, output, kinds, perType)
@@ -63,11 +62,6 @@ func runExport(ctx context.Context, format, output string, kinds []string, perTy
 		return fmt.Errorf("unsupported format: %s (use 'json' or 'yaml')", format)
 	}
 
-	// Create output directory
-	if err := os.MkdirAll(output, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
-	}
-
 	// Determine resource kinds to export
 	var resourceKinds []string
 	if len(kinds) > 0 {
@@ -75,6 +69,14 @@ func runExport(ctx context.Context, format, output string, kinds []string, perTy
 	} else {
 		// Export all known resource types
 		resourceKinds = []string{"User"}
+	}
+	if err := validateExportKinds(resourceKinds); err != nil {
+		return err
+	}
+
+	// Create output directory only after every requested kind passes preflight.
+	if err := os.MkdirAll(output, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	totalExported := 0
@@ -89,6 +91,17 @@ func runExport(ctx context.Context, format, output string, kinds []string, perTy
 	}
 
 	fmt.Printf("✅ Export complete. Exported %d resources.\n", totalExported)
+	return nil
+}
+
+func validateExportKinds(kinds []string) error {
+	for _, kind := range kinds {
+		switch kind {
+		case "User":
+		default:
+			return fmt.Errorf("unknown resource kind: %s", kind)
+		}
+	}
 	return nil
 }
 

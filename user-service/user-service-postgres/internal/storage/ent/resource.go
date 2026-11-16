@@ -10,7 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/resource"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/resource"
 )
 
 // Resource is the model entity for the Resource schema.
@@ -18,7 +18,7 @@ type Resource struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// Unique identifier (e.g., dev-1a2b3c4d)
+	// Unique identifier (e.g., dev_01h455vb4pex5vsknk084sn02q)
 	UID string `json:"uid,omitempty"`
 	// Human-readable name
 	Name string `json:"name,omitempty"`

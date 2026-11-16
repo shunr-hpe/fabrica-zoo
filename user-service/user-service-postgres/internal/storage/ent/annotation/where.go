@@ -5,7 +5,7 @@ package annotation
 import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/predicate"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/predicate"
 )
 
 // ID filters vertices based on their ID field.

@@ -1,7 +1,7 @@
 project:
-    name: user-service-pr-postgres
-    module: github.com/openchami/user-service-pr-postgres
-    created: 2026-08-25T23:08:29.0599242-06:00
+    name: user-service-postgres
+    module: github.com/openchami/user-service-postgres
+    created: 2026-11-16T15:53:59.5115298-07:00
 features:
     validation:
         enabled: true

@@ -5,12 +5,12 @@ package enttest
 import (
 	"context"
 
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent"
+	"github.com/openchami/user-service-postgres/internal/storage/ent"
 	// required by schema hooks.
-	_ "github.com/openchami/user-service-pr-postgres/internal/storage/ent/runtime"
+	_ "github.com/openchami/user-service-postgres/internal/storage/ent/runtime"
 
 	"entgo.io/ent/dialect/sql/schema"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/migrate"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/migrate"
 )
 
 type (

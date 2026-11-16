@@ -5,10 +5,10 @@ package ent
 import (
 	"time"
 
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/annotation"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/label"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/resource"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/schema"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/annotation"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/label"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/resource"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/schema"
 )
 
 // The init function reads all schema descriptors with runtime code

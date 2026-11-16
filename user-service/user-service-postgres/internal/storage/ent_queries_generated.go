@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/label"
-	entresource "github.com/openchami/user-service-pr-postgres/internal/storage/ent/resource"
+	"github.com/openchami/user-service-postgres/internal/storage/ent"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/label"
+	entresource "github.com/openchami/user-service-postgres/internal/storage/ent/resource"
 
-	v1 "github.com/openchami/user-service-pr-postgres/apis/storage-annotations.openchami.org/v1"
+	v1 "github.com/openchami/user-service-postgres/apis/storage-annotations.openchami.org/v1"
 )
 
 // ensureEntClient verifies the ent client has been initialized

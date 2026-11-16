@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent"
+	"github.com/openchami/user-service-postgres/internal/storage/ent"
 )
 
 // The AnnotationFunc type is an adapter to allow the use of ordinary

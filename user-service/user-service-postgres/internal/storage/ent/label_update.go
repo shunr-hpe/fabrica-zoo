@@ -10,9 +10,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/label"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/predicate"
-	"github.com/openchami/user-service-pr-postgres/internal/storage/ent/resource"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/label"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/predicate"
+	"github.com/openchami/user-service-postgres/internal/storage/ent/resource"
 )
 
 // LabelUpdate is the builder for updating Label entities.

@@ -7,11 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
+	v1 "github.com/openchami/user-service-postgres/apis/storage-annotations.openchami.org/v1"
+	"github.com/openchami/user-service-postgres/internal/storage"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-
-	v1 "github.com/openchami/user-service-pr-postgres/apis/storage-annotations.openchami.org/v1"
-	"github.com/openchami/user-service-pr-postgres/internal/storage"
 )
 
 func newImportCommand() *cobra.Command {
@@ -40,13 +39,13 @@ Import modes:
 
 Examples:
   # Import from backup directory
-  user_service_pr_postgres import --input ./backup
+  user_service_postgres import --input ./backup
 
   # Dry run to preview changes
-  user_service_pr_postgres import --input ./backup --dry-run
+  user_service_postgres import --input ./backup --dry-run
 
   # Replace all resources
-  user_service_pr_postgres import --input ./backup --mode replace
+  user_service_postgres import --input ./backup --mode replace
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runImport(cmd.Context(), input, mode, dryRun, skipExisting)
@@ -81,8 +80,12 @@ func runImport(ctx context.Context, input, mode string, dryRun, skipExisting boo
 	if _, err := os.Stat(input); err != nil {
 		return fmt.Errorf("input directory does not exist: %w", err)
 	}
+	files, err := preflightImport(input)
+	if err != nil {
+		return err
+	}
 
-	// Handle replace mode - delete all resources first
+	// Handle replace mode only after every input file passes preflight.
 	if mode == "replace" && !dryRun {
 		fmt.Printf("⚠️  Replace mode - deleting existing resources...\n")
 		if err := deleteAllResources(ctx); err != nil {
@@ -90,38 +93,15 @@ func runImport(ctx context.Context, input, mode string, dryRun, skipExisting boo
 		}
 	}
 
-	// Walk input directory and import files
 	totalImported := 0
 	totalSkipped := 0
-	var importErr error
-
-	err := filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		// Only process JSON and YAML files
-		ext := filepath.Ext(path)
-		if ext != ".json" && ext != ".yaml" && ext != ".yml" {
-			return nil
-		}
-
+	for _, path := range files {
 		imported, skipped, err := importFile(ctx, path, mode, dryRun)
 		if err != nil {
-			fmt.Printf("  ✗ %s: %v\n", filepath.Base(path), err)
-			importErr = err
-			return nil // Continue with other files
+			return fmt.Errorf("failed to import %s: %w", filepath.Base(path), err)
 		}
 		totalImported += imported
 		totalSkipped += skipped
-		return nil
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to walk import directory: %w", err)
 	}
 
 	if dryRun {
@@ -130,20 +110,21 @@ func runImport(ctx context.Context, input, mode string, dryRun, skipExisting boo
 		fmt.Printf("✅ Import complete. Imported %d resources (%d skipped).\n", totalImported, totalSkipped)
 	}
 
-	return importErr
+	return nil
 }
 
-func importFile(ctx context.Context, path string, mode string, dryRun bool) (imported, skipped int, err error) {
-	// Read file
+type importFileData struct {
+	data []byte
+	ext  string
+	kind string
+}
+
+func readImportFile(path string) (importFileData, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to read file: %w", err)
+		return importFileData{}, fmt.Errorf("failed to read file: %w", err)
 	}
-
-	// Determine format
 	ext := filepath.Ext(path)
-
-	// Try to unmarshal into generic resource first to determine kind
 	var genericResource struct {
 		APIVersion string `json:"apiVersion" yaml:"apiVersion"`
 		Kind       string `json:"kind" yaml:"kind"`
@@ -151,26 +132,77 @@ func importFile(ctx context.Context, path string, mode string, dryRun bool) (imp
 
 	if ext == ".json" {
 		if err := json.Unmarshal(data, &genericResource); err != nil {
-			return 0, 0, fmt.Errorf("failed to parse JSON: %w", err)
+			return importFileData{}, fmt.Errorf("failed to parse JSON: %w", err)
 		}
 	} else {
 		if err := yaml.Unmarshal(data, &genericResource); err != nil {
-			return 0, 0, fmt.Errorf("failed to parse YAML: %w", err)
+			return importFileData{}, fmt.Errorf("failed to parse YAML: %w", err)
 		}
+	}
+	return importFileData{data: data, ext: ext, kind: genericResource.Kind}, nil
+}
+
+func unmarshalImportResource(file importFileData, resource interface{}) error {
+	if file.ext == ".json" {
+		return json.Unmarshal(file.data, resource)
+	}
+	return yaml.Unmarshal(file.data, resource)
+}
+
+func validateImportFile(path string) error {
+	file, err := readImportFile(path)
+	if err != nil {
+		return err
+	}
+	switch file.kind {
+	case "User":
+		var res *v1.User
+		if err := unmarshalImportResource(file, &res); err != nil {
+			return fmt.Errorf("failed to unmarshal User: %w", err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown resource kind: %s", file.kind)
+	}
+}
+
+func preflightImport(input string) ([]string, error) {
+	var files []string
+	err := filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		ext := filepath.Ext(path)
+		if ext != ".json" && ext != ".yaml" && ext != ".yml" {
+			return nil
+		}
+		if err := validateImportFile(path); err != nil {
+			return fmt.Errorf("invalid import file %s: %w", filepath.Base(path), err)
+		}
+		files = append(files, path)
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("import preflight failed: %w", err)
+	}
+	return files, nil
+}
+
+func importFile(ctx context.Context, path string, mode string, dryRun bool) (imported, skipped int, err error) {
+	file, err := readImportFile(path)
+	if err != nil {
+		return 0, 0, err
 	}
 
 	// Import based on kind
-	switch genericResource.Kind {
+	switch file.kind {
 	case "User":
 		var res *v1.User
-		if ext == ".json" {
-			if err := json.Unmarshal(data, &res); err != nil {
-				return 0, 0, fmt.Errorf("failed to unmarshal User: %w", err)
-			}
-		} else {
-			if err := yaml.Unmarshal(data, &res); err != nil {
-				return 0, 0, fmt.Errorf("failed to unmarshal User: %w", err)
-			}
+		if err := unmarshalImportResource(file, &res); err != nil {
+			return 0, 0, fmt.Errorf("failed to unmarshal User: %w", err)
 		}
 
 		// Check if resource exists
@@ -193,7 +225,7 @@ func importFile(ctx context.Context, path string, mode string, dryRun bool) (imp
 		}
 		return 1, 0, nil
 	default:
-		return 0, 0, fmt.Errorf("unknown resource kind: %s", genericResource.Kind)
+		return 0, 0, fmt.Errorf("unknown resource kind: %s", file.kind)
 	}
 }
 

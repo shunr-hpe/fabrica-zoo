@@ -1,0 +1,29 @@
+{
+  "Format": 1,
+  "Config": {
+    "ProjectName": "user-service-postgres",
+    "StorageType": "ent",
+    "DBDriver": "postgres",
+    "EventsEnabled": false,
+    "EventBusType": "memory",
+    "ReconciliationEnabled": false,
+    "ReconcileWorkers": 5,
+    "ReconcileRequeueMinutes": 5,
+    "MetricsEnabled": false,
+    "AuthEnabled": false,
+    "AuthZEnabled": false,
+    "AuthZMode": "enforce",
+    "ValidationEnabled": true,
+    "ValidationMode": "strict",
+    "ConditionalEnabled": true,
+    "ETagAlgorithm": "sha256",
+    "VersioningEnabled": true
+  },
+  "Files": {
+    "../../internal/middleware/conditional_middleware_generated.go": "613c5c3889624bf1feea5b7f393f3f1caa31671bc007528bb95debc026843a0e",
+    "../../internal/middleware/validation_middleware_generated.go": "34a9572341a7c3d2bd05798971f90ebe97575c4b7d3298914c8897ce2e6a3651",
+    "../../internal/middleware/versioning_middleware_generated.go": "e1f83a5476bce906fa1205cc7d6e41eb554c1ead7f6102e23c9687a70ec31821",
+    "features_generated.go": "f238e8c476e1b45b9a8b3abf6a09b5552818ccf02312fa2ad030cab220cec967",
+    "runtime_helpers_generated.go": "7324ea90573ed833b72b1a4f5f7f20cdb88a0352e40f843a631023e47941acab"
+  }
+}
