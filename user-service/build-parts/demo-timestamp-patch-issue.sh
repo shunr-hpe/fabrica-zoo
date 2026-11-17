@@ -31,8 +31,13 @@ CT_JSONPATCH='Content-Type: application/json-patch+json'
 SUFFIX="$(date +%s)"
 
 compare() { # label, write-value, read-value
-	if [[ "$2" == "$3" ]]; then
-		echo "  OK       $1: write=$2 read=$3"
+	# Normalize to UTC with microsecond precision so the same instant compares
+	# equal regardless of the serialized zone offset (Z vs -07:00).
+	local w r
+	w=$(date -u -d "$2" '+%Y-%m-%dT%H:%M:%S.%6NZ' 2>/dev/null || echo "$2")
+	r=$(date -u -d "$3" '+%Y-%m-%dT%H:%M:%S.%6NZ' 2>/dev/null || echo "$3")
+	if [[ "$w" == "$r" ]]; then
+		echo "  OK       $1: write=$2 read=$3 (same instant: $w)"
 	else
 		echo "  MISMATCH $1: write=$2 read=$3"
 	fi

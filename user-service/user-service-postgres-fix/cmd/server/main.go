@@ -1,0 +1,273 @@
+// Scaffolded by Fabrica v0.4.15-1-g93d1e36. Safe to customize; not overwritten by generation.
+// Template: init/main.go.tmpl
+// Generated: 2026-11-17T18:56:03Z
+//
+// SPDX-FileCopyrightText: Copyright © 2026 OpenCHAMI a Series of LF Projects, LLC
+//
+// SPDX-License-Identifier: MIT
+
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/openchami/fabrica/pkg/versioning"
+	_ "github.com/openchami/user-service-postgres-fix/pkg/apiversion"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+)
+
+// Config holds all configuration for the service
+type Config struct {
+	// Server Configuration
+	Port         int    `mapstructure:"port"`
+	Host         string `mapstructure:"host"`
+	ReadTimeout  int    `mapstructure:"read_timeout"`
+	WriteTimeout int    `mapstructure:"write_timeout"`
+	IdleTimeout  int    `mapstructure:"idle_timeout"`
+
+	GeneratedFeatureConfig `mapstructure:",squash"`
+
+	// Feature Flags
+	Debug bool `mapstructure:"debug"`
+}
+
+// DefaultConfig returns the default configuration
+func DefaultConfig() *Config {
+	config := &Config{
+		Port:         8080,
+		Host:         "0.0.0.0",
+		ReadTimeout:  15,
+		WriteTimeout: 15,
+		IdleTimeout:  60,
+		Debug:        false,
+	}
+	applyGeneratedFeatureDefaults(config)
+	return config
+}
+
+var (
+	cfgFile string
+	config  *Config
+)
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+var rootCmd = &cobra.Command{
+	Use:   "user-service-postgres-fix",
+	Short: "",
+	Long:  `user-service-postgres-fix - A Fabrica-generated OpenCHAMI service`,
+	RunE:  runServer,
+}
+
+var serveCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Start the user-service-postgres-fix server",
+	Long:  `Start the user-service-postgres-fix HTTP server with the configured options`,
+	RunE:  runServer,
+}
+
+func bindFlagsWithUnderscoreKeys(flags *pflag.FlagSet) error {
+	var bindErr error
+
+	flags.VisitAll(func(flag *pflag.Flag) {
+		if bindErr != nil {
+			return
+		}
+
+		key := strings.ReplaceAll(flag.Name, "-", "_")
+		bindErr = viper.BindPFlag(key, flag)
+	})
+
+	return bindErr
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	// Global flags
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.user-service-postgres-fix.yaml)")
+	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
+
+	// Server flags
+	serveCmd.Flags().IntP("port", "p", 8080, "Port to listen on")
+	serveCmd.Flags().String("host", "0.0.0.0", "Host to bind to")
+	serveCmd.Flags().Int("read-timeout", 15, "Read timeout in seconds")
+	serveCmd.Flags().Int("write-timeout", 15, "Write timeout in seconds")
+	serveCmd.Flags().Int("idle-timeout", 60, "Idle timeout in seconds")
+
+	registerGeneratedFeatureFlags(serveCmd.Flags())
+
+	// Bind flags to viper
+	if err := bindFlagsWithUnderscoreKeys(serveCmd.Flags()); err != nil {
+		panic(fmt.Errorf("failed to bind serve flags: %w", err))
+	}
+	if err := bindFlagsWithUnderscoreKeys(rootCmd.PersistentFlags()); err != nil {
+		panic(fmt.Errorf("failed to bind root flags: %w", err))
+	}
+
+	// Add subcommands
+	rootCmd.AddCommand(serveCmd)
+
+	rootCmd.AddCommand(NewVersionCommand())
+
+	registerGeneratedFeatureCommands(rootCmd)
+}
+
+func initConfig() {
+	config = DefaultConfig()
+
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+	} else {
+		// Search for config in home directory
+		home, err := os.UserHomeDir()
+		cobra.CheckErr(err)
+
+		viper.AddConfigPath(home)
+		viper.AddConfigPath(".")
+		viper.SetConfigType("yaml")
+		viper.SetConfigName(".user-service-postgres-fix")
+	}
+
+	// Environment variables
+	viper.SetEnvPrefix("USER_SERVICE_POSTGRES_FIX")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.AutomaticEnv()
+
+	// Read config file if it exists
+	if err := viper.ReadInConfig(); err == nil {
+		log.Printf("Using config file: %s", viper.ConfigFileUsed())
+	}
+
+	// Unmarshal config
+	if err := viper.Unmarshal(config); err != nil {
+		log.Fatalf("Unable to decode into config struct: %v", err)
+	}
+
+	// Set debug logging
+	if config.Debug {
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		log.Println("Debug logging enabled")
+	}
+}
+
+func runServer(cmd *cobra.Command, args []string) error {
+	log.Printf("Starting user-service-postgres-fix server...")
+
+	features, err := loadGeneratedFeatures(cmd.Context(), config)
+	if err != nil {
+		return err
+	}
+	defer features.Close()
+
+	// Register resource prefixes for UID generation
+	// This is required before any handlers can create resources
+	if err := registerResourcePrefixes(); err != nil {
+		return fmt.Errorf("failed to register resource prefixes: %w", err)
+	}
+
+	// Setup router
+	r := chi.NewRouter()
+
+	// Add middleware
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+
+	features.Use(r)
+
+	// Version negotiation (Accept header `version=` or URL strategy)
+	// Initialize and use global version registry when versioning is enabled.
+	// Note: VersionNegotiationMiddleware currently uses versioning.VersionRegistry
+	// Versioning support will be fully wired in a future update.
+	r.Use(versioning.VersionNegotiationMiddleware(versioning.GlobalVersionRegistry, nil))
+
+	if config.Debug {
+		r.Mount("/debug", middleware.Profiler())
+	}
+
+	// Public endpoints (bypass AuthN/AuthZ)
+	r.Group(func(public chi.Router) {
+		// Service health (always public)
+		public.Get("/health", healthHandler)
+		// Standardized service status (always public)
+		RegisterGeneratedPublicRoutes(public)
+		public.Get("/openapi.json", ServeOpenAPISpec)
+		public.Get("/docs", ServeSwaggerUI)
+		features.RegisterPublicRoutes(public)
+	})
+
+	// Protected endpoints (API handlers)
+	r.Group(func(protected chi.Router) {
+		features.UseProtected(protected)
+
+		// Register routes - generated by 'fabrica generate'
+		RegisterGeneratedRoutes(protected)
+	})
+
+	// Create HTTP server
+	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      r,
+		ReadTimeout:  time.Duration(config.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(config.WriteTimeout) * time.Second,
+		IdleTimeout:  time.Duration(config.IdleTimeout) * time.Second,
+	}
+
+	// Return server failures through runServer so feature cleanup still runs.
+	serverErrors := make(chan error, 1)
+	logStartupConfiguration(config, addr)
+	go func() { serverErrors <- server.ListenAndServe() }()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(quit)
+	select {
+	case err := <-serverErrors:
+		if err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("server failed: %w", err)
+		}
+		return nil
+	case <-quit:
+	case <-cmd.Context().Done():
+	}
+	log.Println("Server shutting down...")
+
+	// Graceful shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("server forced to shutdown: %w", err)
+	}
+
+	log.Println("Server exited")
+	return nil
+}
+
+// Health check handler
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"healthy","service":"user-service-postgres-fix"}`))
+}
+
+// registerResourcePrefixes is defined in routes_generated.go

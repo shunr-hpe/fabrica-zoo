@@ -1,0 +1,41 @@
+project:
+    name: user-service-postgres-fix
+    module: github.com/openchami/user-service-postgres-fix
+    created: 2026-11-17T11:56:04.0912333-07:00
+features:
+    validation:
+        enabled: true
+        mode: strict
+    events:
+        enabled: false
+        bus_type: memory
+    conditional:
+        enabled: true
+        etag_algorithm: sha256
+    auth:
+        enabled: false
+    storage:
+        enabled: true
+        type: ent
+        db_driver: postgres
+    metrics:
+        enabled: false
+        provider: prometheus
+    reconciliation:
+        enabled: false
+        worker_count: 5
+        requeue_delay: 5
+    security:
+        authn:
+            enabled: false
+        authz:
+            enabled: false
+            mode: enforce
+generation:
+    handlers: true
+    storage: true
+    client: true
+    openapi: true
+    events: false
+    middleware: true
+    reconciliation: false
